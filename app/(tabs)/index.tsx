@@ -1,43 +1,62 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
-import axios from 'axios';
-import { 
-  AlertCircle, 
-  Clock, 
-  FileText, 
-  Flag, 
-  Shield, 
-  MapPin, 
-  User, 
-  Info, 
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
+import axios from "axios";
+import {
+  AlertCircle,
+  Clock,
+  FileText,
+  Flag,
+  Shield,
+  MapPin,
+  User,
+  Info,
   Car,
-  Image as ImageIcon
-} from 'lucide-react-native';
+  Image as ImageIcon,
+} from "lucide-react-native";
 
 export default function HomeScreen() {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchFeed = async () => {
+    try {
+      const response = await axios.get(
+        "http://192.168.1.6:3000/api/account/feed"
+      );
+      console.log("Respuesta de la API:", response.data);
+      setFeed(response.data);
+      setLoading(false);
+      setRefreshing(false);
+    } catch (err) {
+      console.log(err);
+      setError("Hubo un error al cargar las denuncias.");
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFeed = async () => {
-      try {
-        const response = await axios.get('http://192.168.1.6:3000/api/account/feed');
-        console.log("Respuesta de la API:", response.data);
-        setFeed(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.log(err);
-        setError("Hubo un error al cargar las denuncias.");
-        setLoading(false);
-      }
-    };
-
     fetchFeed();
   }, []);
 
-  const formatDate = (dateString) => {
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchFeed();
+  }, []);
+
+  const formatDate = (dateString: any) => {
     return new Date(dateString).toLocaleString("es-ES", {
       year: "numeric",
       month: "long",
@@ -50,28 +69,28 @@ export default function HomeScreen() {
   const getStatusColor = (statusName) => {
     switch (statusName.toLowerCase()) {
       case "pendiente":
-        return { 
-          text: '#FFBF00', 
-          bg: 'rgba(255, 191, 0, 0.1)', 
-          border: 'rgba(255, 191, 0, 0.2)'
+        return {
+          text: "#FFBF00",
+          bg: "rgba(255, 191, 0, 0.1)",
+          border: "rgba(255, 191, 0, 0.2)",
         };
       case "revision":
-        return { 
-          text: '#3B82F6', 
-          bg: 'rgba(59, 130, 246, 0.1)', 
-          border: 'rgba(59, 130, 246, 0.2)'
+        return {
+          text: "#3B82F6",
+          bg: "rgba(59, 130, 246, 0.1)",
+          border: "rgba(59, 130, 246, 0.2)",
         };
       case "resuelto":
-        return { 
-          text: '#4ADE80', 
-          bg: 'rgba(74, 222, 128, 0.1)', 
-          border: 'rgba(74, 222, 128, 0.2)'
+        return {
+          text: "#4ADE80",
+          bg: "rgba(74, 222, 128, 0.1)",
+          border: "rgba(74, 222, 128, 0.2)",
         };
       default:
-        return { 
-          text: '#9CA3AF', 
-          bg: 'rgba(156, 163, 175, 0.1)', 
-          border: 'rgba(156, 163, 175, 0.2)'
+        return {
+          text: "#9CA3AF",
+          bg: "rgba(156, 163, 175, 0.1)",
+          border: "rgba(156, 163, 175, 0.2)",
         };
     }
   };
@@ -95,10 +114,17 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.mainContainer}>
+    <ScrollView
+      style={styles.mainContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#FFD700"]}
+        />
+      }
+    >
       <View style={styles.container}>
-      
-
         {feed.length === 0 ? (
           <View style={styles.emptyContainer}>
             <FileText size={48} color="#6B7280" />
@@ -114,15 +140,17 @@ export default function HomeScreen() {
                     <Flag size={20} color="#FFD700" />
                   </View>
                   <View>
-                    <Text style={styles.cardTitle}>Denuncia #{denuncia.PK_complaint}</Text>
+                    <Text style={styles.cardTitle}>
+                      Denuncia #{denuncia.PK_complaint}
+                    </Text>
                     <View style={styles.dateContainer}>
                       <Clock size={14} color="#9CA3AF" />
-                      <Text style={styles.dateText}>{formatDate(denuncia.createdAt)}</Text>
+                      <Text style={styles.dateText}>
+                        {formatDate(denuncia.createdAt)}
+                      </Text>
                     </View>
                   </View>
                 </View>
-
-             
               </View>
 
               <View style={styles.cardContent}>
@@ -132,9 +160,9 @@ export default function HomeScreen() {
                     {/* Image Section */}
                     {denuncia.image ? (
                       <View style={styles.imageContainer}>
-                        <Image 
-                          source={{ uri: denuncia.image }} 
-                          style={styles.image} 
+                        <Image
+                          source={{ uri: denuncia.image }}
+                          style={styles.image}
                         />
                       </View>
                     ) : (
@@ -148,7 +176,9 @@ export default function HomeScreen() {
                     <View style={styles.transportInfoContainer}>
                       <View style={styles.sectionHeader}>
                         <Car size={18} color="#FFD700" />
-                        <Text style={styles.sectionTitle}>Información del Transporte</Text>
+                        <Text style={styles.sectionTitle}>
+                          Información del Transporte
+                        </Text>
                       </View>
 
                       <View style={styles.infoGrid}>
@@ -158,7 +188,9 @@ export default function HomeScreen() {
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Línea</Text>
-                            <Text style={styles.infoValue}>{denuncia.transportLine || "No especificado"}</Text>
+                            <Text style={styles.infoValue}>
+                              {denuncia.transportLine || "No especificado"}
+                            </Text>
                           </View>
                         </View>
 
@@ -168,7 +200,9 @@ export default function HomeScreen() {
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Placa</Text>
-                            <Text style={styles.infoValue}>{denuncia.vehiclePlate || "No especificado"}</Text>
+                            <Text style={styles.infoValue}>
+                              {denuncia.vehiclePlate || "No especificado"}
+                            </Text>
                           </View>
                         </View>
 
@@ -178,7 +212,9 @@ export default function HomeScreen() {
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Relación</Text>
-                            <Text style={styles.infoValue}>{denuncia.incidentRelation}</Text>
+                            <Text style={styles.infoValue}>
+                              {denuncia.incidentRelation}
+                            </Text>
                           </View>
                         </View>
 
@@ -189,11 +225,19 @@ export default function HomeScreen() {
                           <View>
                             <Text style={styles.infoLabel}>Estado</Text>
                             <View style={styles.statusIndicatorContainer}>
-                              <View style={[
-                                styles.statusDot, 
-                                { backgroundColor: getStatusColor(denuncia.tbstatuscomplaints.statusName).text }
-                              ]} />
-                              <Text style={styles.infoValue}>{denuncia.tbstatuscomplaints.statusName}</Text>
+                              <View
+                                style={[
+                                  styles.statusDot,
+                                  {
+                                    backgroundColor: getStatusColor(
+                                      denuncia.tbstatuscomplaints.statusName
+                                    ).text,
+                                  },
+                                ]}
+                              />
+                              <Text style={styles.infoValue}>
+                                {denuncia.tbstatuscomplaints.statusName}
+                              </Text>
                             </View>
                           </View>
                         </View>
@@ -207,7 +251,9 @@ export default function HomeScreen() {
                     <View style={styles.descriptionContainer}>
                       <View style={styles.sectionHeader}>
                         <Info size={18} color="#FFD700" />
-                        <Text style={styles.sectionTitle}>Descripción del Incidente</Text>
+                        <Text style={styles.sectionTitle}>
+                          Descripción del Incidente
+                        </Text>
                       </View>
 
                       <View style={styles.descriptionContent}>
@@ -215,7 +261,9 @@ export default function HomeScreen() {
                           {denuncia.description ? (
                             denuncia.description
                           ) : (
-                            <Text style={styles.noDescriptionText}>No hay descripción proporcionada</Text>
+                            <Text style={styles.noDescriptionText}>
+                              No hay descripción proporcionada
+                            </Text>
                           )}
                         </Text>
                       </View>
@@ -225,16 +273,22 @@ export default function HomeScreen() {
                     <View style={styles.violationsContainer}>
                       <View style={styles.sectionHeader}>
                         <Shield size={18} color="#FFD700" />
-                        <Text style={styles.sectionTitle}>Infracciones Reportadas</Text>
+                        <Text style={styles.sectionTitle}>
+                          Infracciones Reportadas
+                        </Text>
                       </View>
 
                       <View style={styles.violationsList}>
-                        {JSON.parse(denuncia.violations).map((violation, idx) => (
-                          <View key={idx} style={styles.violationItem}>
-                            <AlertCircle size={16} color="#F87171" />
-                            <Text style={styles.violationText}>{violation}</Text>
-                          </View>
-                        ))}
+                        {JSON.parse(denuncia.violations).map(
+                          (violation, idx) => (
+                            <View key={idx} style={styles.violationItem}>
+                              <AlertCircle size={16} color="#F87171" />
+                              <Text style={styles.violationText}>
+                                {violation}
+                              </Text>
+                            </View>
+                          )
+                        )}
                       </View>
                     </View>
                   </View>
@@ -251,7 +305,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
   },
   container: {
     padding: 8,
@@ -260,18 +314,18 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFD700',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#FFD700",
+    textAlign: "center",
     marginBottom: 20,
-    textShadowColor: 'rgba(255, 215, 0, 0.5)',
+    textShadowColor: "rgba(255, 215, 0, 0.5)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   centeredContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
     minHeight: 300,
   },
@@ -280,78 +334,78 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: '#FFD700',
-    borderTopColor: 'transparent',
+    borderColor: "#FFD700",
+    borderTopColor: "transparent",
     marginBottom: 16,
   },
   loadingText: {
     fontSize: 20,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   errorText: {
     marginTop: 16,
     fontSize: 18,
-    color: '#EF4444',
+    color: "#EF4444",
   },
   emptyContainer: {
-    backgroundColor: 'rgba(31, 41, 55, 0.8)',
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
     padding: 32,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
-    alignItems: 'center',
+    borderColor: "rgba(255, 215, 0, 0.2)",
+    alignItems: "center",
   },
   emptyText: {
     fontSize: 20,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 16,
   },
   card: {
     marginBottom: 12,
-    backgroundColor: 'rgba(31, 41, 55, 0.8)',
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
-    overflow: 'hidden',
-    shadowColor: '#000',
+    borderColor: "rgba(255, 215, 0, 0.2)",
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     padding: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 215, 0, 0.1)',
+    borderBottomColor: "rgba(255, 215, 0, 0.1)",
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   flagIconContainer: {
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    backgroundColor: "rgba(255, 215, 0, 0.2)",
     padding: 8,
     borderRadius: 6,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     marginTop: 2,
   },
   dateText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   statusBadge: {
     paddingVertical: 8,
@@ -360,96 +414,89 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusText: {
-    fontWeight: '500',
+    fontWeight: "500",
   },
-  cardContent: {
-  
-  },
+  cardContent: {},
   contentGrid: {
     // In React Native, we'll need to handle grid with different approach on small vs large screens
   },
-  leftColumn: {
-   
-  },
+  leftColumn: {},
   rightColumn: {
     // Style for right column
   },
   imageContainer: {
-   
-    overflow: 'hidden',
+    overflow: "hidden",
     // borderWidth: 1,
     // borderColor: '#374151',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   image: {
-    width: '100%',
+    width: "100%",
     height: 200,
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   noImageContainer: {
     height: 192,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     // borderWidth: 1,
     // borderColor: '#374151',
-    justifyContent: 'center',
-    alignItems: 'center',
-   
+    justifyContent: "center",
+    alignItems: "center",
   },
   noImageText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 8,
   },
   transportInfoContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+
     padding: 20,
     // borderWidth: 1,
     // borderColor: '#374151',
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#FFD700',
+    fontWeight: "500",
+    color: "#FFD700",
   },
   infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 16,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    minWidth: '45%', 
+    minWidth: "45%",
   },
   iconContainer: {
     width: 40,
     height: 40,
-    backgroundColor: 'rgba(31, 41, 55, 0.8)',
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   infoLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#FFFFFF',
+    fontWeight: "500",
+    color: "#FFFFFF",
   },
   statusIndicatorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   statusDot: {
@@ -458,25 +505,23 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   descriptionContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
     padding: 20,
     // borderWidth: 1,
     // borderColor: '#374151',
- 
   },
   descriptionContent: {
     padding: 4,
-   
   },
   descriptionText: {
-    color: '#D1D5DB',
+    color: "#D1D5DB",
   },
   noDescriptionText: {
-    fontStyle: 'italic',
-    color: '#6B7280',
+    fontStyle: "italic",
+    color: "#6B7280",
   },
   violationsContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
 
     padding: 20,
     // borderWidth: 1,
@@ -484,17 +529,16 @@ const styles = StyleSheet.create({
   },
   violationsList: {
     gap: 4,
-    padding:4
+    padding: 4,
   },
   violationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 8,
-    padding: 2
-
+    padding: 2,
   },
   violationText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
   },
 });
