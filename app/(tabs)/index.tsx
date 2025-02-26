@@ -1,4 +1,3 @@
-"use client";
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -7,8 +6,6 @@ import {
   Image,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
-  TouchableOpacity,
 } from "react-native";
 import axios from "axios";
 import {
@@ -20,9 +17,14 @@ import {
   MapPin,
   User,
   Info,
+  Activity,
   Car,
+  Bus,
+  Route,
   Image as ImageIcon,
 } from "lucide-react-native";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
   const [feed, setFeed] = useState([]);
@@ -30,20 +32,41 @@ export default function HomeScreen() {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Función para obtener el token de AsyncStorage
+  const getToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem("@storage_token");
+
+      return token;
+    } catch (error) {
+      return null;
+    }
+  };
+
   const fetchFeed = async () => {
+    const token = await getToken(); // Obtener el token
     try {
       const response = await axios.get(
-        "http://192.168.1.6:3000/api/account/feed"
+        "https://tarifa.vercel.app/api/account/feed",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Incluir el token en los encabezados
+          },
+        }
       );
-      console.log("Respuesta de la API:", response.data);
+
       setFeed(response.data);
       setLoading(false);
       setRefreshing(false);
     } catch (err) {
-      console.log(err);
       setError("Hubo un error al cargar las denuncias.");
       setLoading(false);
       setRefreshing(false);
+      Alert.alert(
+        "Error",
+        "Hubo un error al cargar las denuncias. Intenta nuevamente.",
+        [{ text: "OK" }]
+      );
     }
   };
 
@@ -66,7 +89,7 @@ export default function HomeScreen() {
     });
   };
 
-  const getStatusColor = (statusName) => {
+  const getStatusColor = (statusName: any) => {
     switch (statusName.toLowerCase()) {
       case "pendiente":
         return {
@@ -120,7 +143,7 @@ export default function HomeScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={["#FFD700"]}
+          colors={["#7c7c7c"]}
         />
       }
     >
@@ -137,11 +160,11 @@ export default function HomeScreen() {
               <View style={styles.cardHeader}>
                 <View style={styles.headerLeft}>
                   <View style={styles.flagIconContainer}>
-                    <Flag size={20} color="#FFD700" />
+                    <Flag size={20} color="#7c7c7c" />
                   </View>
                   <View>
                     <Text style={styles.cardTitle}>
-                      Denuncia #{denuncia.PK_complaint}
+                      Denuncia Nº {denuncia.PK_complaint}
                     </Text>
                     <View style={styles.dateContainer}>
                       <Clock size={14} color="#9CA3AF" />
@@ -161,30 +184,25 @@ export default function HomeScreen() {
                     {denuncia.image ? (
                       <View style={styles.imageContainer}>
                         <Image
-                          source={{ uri: denuncia.image }}
+                          source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuAM7MdflxK4Yf7qjor3SqZPSja_aB4lIA5g&s" }}
                           style={styles.image}
                         />
                       </View>
                     ) : (
-                      <View style={styles.noImageContainer}>
-                        <ImageIcon size={32} color="#4B5563" />
-                        <Text style={styles.noImageText}>Sin imagen</Text>
-                      </View>
+                      <View style={styles.imageContainer}>
+                      <Image
+                        source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuAM7MdflxK4Yf7qjor3SqZPSja_aB4lIA5g&s" }}
+                        style={styles.image}
+                      />
+                    </View>
                     )}
 
                     {/* Transport Info Section */}
                     <View style={styles.transportInfoContainer}>
-                      <View style={styles.sectionHeader}>
-                        <Car size={18} color="#FFD700" />
-                        <Text style={styles.sectionTitle}>
-                          Información del Transporte
-                        </Text>
-                      </View>
-
                       <View style={styles.infoGrid}>
                         <View style={styles.infoItem}>
                           <View style={styles.iconContainer}>
-                            <MapPin size={16} color="#FFD700" />
+                            <Route size={16} color="#7c7c7c" />
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Línea</Text>
@@ -196,7 +214,7 @@ export default function HomeScreen() {
 
                         <View style={styles.infoItem}>
                           <View style={styles.iconContainer}>
-                            <Car size={16} color="#FFD700" />
+                            <Bus size={16} color="#7c7c7c" />
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Placa</Text>
@@ -208,7 +226,7 @@ export default function HomeScreen() {
 
                         <View style={styles.infoItem}>
                           <View style={styles.iconContainer}>
-                            <User size={16} color="#FFD700" />
+                            <User size={16} color="#7c7c7c" />
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Relación</Text>
@@ -220,7 +238,7 @@ export default function HomeScreen() {
 
                         <View style={styles.infoItem}>
                           <View style={styles.iconContainer}>
-                            <User size={16} color="#FFD700" />
+                            <Activity size={16} color="#7c7c7c" />
                           </View>
                           <View>
                             <Text style={styles.infoLabel}>Estado</Text>
@@ -241,6 +259,9 @@ export default function HomeScreen() {
                             </View>
                           </View>
                         </View>
+
+
+
                       </View>
                     </View>
                   </View>
@@ -249,13 +270,6 @@ export default function HomeScreen() {
                   <View style={styles.rightColumn}>
                     {/* Description Section */}
                     <View style={styles.descriptionContainer}>
-                      <View style={styles.sectionHeader}>
-                        <Info size={18} color="#FFD700" />
-                        <Text style={styles.sectionTitle}>
-                          Descripción del Incidente
-                        </Text>
-                      </View>
-
                       <View style={styles.descriptionContent}>
                         <Text style={styles.descriptionText}>
                           {denuncia.description ? (
@@ -272,10 +286,7 @@ export default function HomeScreen() {
                     {/* Violations Section */}
                     <View style={styles.violationsContainer}>
                       <View style={styles.sectionHeader}>
-                        <Shield size={18} color="#FFD700" />
-                        <Text style={styles.sectionTitle}>
-                          Infracciones Reportadas
-                        </Text>
+                        <Text style={styles.sectionTitle}>Infracciones</Text>
                       </View>
 
                       <View style={styles.violationsList}>
@@ -305,7 +316,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#efefef",
   },
   container: {
     padding: 8,
@@ -315,7 +326,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#FFD700",
+    color: "#000000",
     textAlign: "center",
     marginBottom: 20,
     textShadowColor: "rgba(255, 215, 0, 0.5)",
@@ -334,7 +345,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: "#FFD700",
+    borderColor: "#7c7c7c",
     borderTopColor: "transparent",
     marginBottom: 16,
   },
@@ -348,7 +359,7 @@ const styles = StyleSheet.create({
     color: "#EF4444",
   },
   emptyContainer: {
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    backgroundColor: "#ffffff",
     padding: 32,
     borderRadius: 8,
     borderWidth: 1,
@@ -362,12 +373,11 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 12,
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    backgroundColor: "#ffffff",
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 215, 0, 0.2)",
+
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#e4e2e2",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -378,9 +388,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     padding: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 215, 0, 0.1)",
+    backgroundColor: "",
+ 
   },
   headerLeft: {
     flexDirection: "row",
@@ -388,14 +397,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   flagIconContainer: {
-    backgroundColor: "rgba(255, 215, 0, 0.2)",
+    backgroundColor: "rgba(255, 215, 0, 0.4)",
     padding: 8,
     borderRadius: 6,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#000000",
   },
   dateContainer: {
     flexDirection: "row",
@@ -405,7 +414,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 12,
-    color: "#9CA3AF",
+    color: "#000000",
   },
   statusBadge: {
     paddingVertical: 8,
@@ -428,7 +437,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     // borderWidth: 1,
     // borderColor: '#374151',
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "#ffffff",
   },
   image: {
     width: "100%",
@@ -437,7 +446,7 @@ const styles = StyleSheet.create({
   },
   noImageContainer: {
     height: 192,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "#ffffff",
     // borderWidth: 1,
     // borderColor: '#374151',
     justifyContent: "center",
@@ -449,27 +458,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   transportInfoContainer: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    padding: 16,
+  },
 
-    padding: 20,
-    // borderWidth: 1,
-    // borderColor: '#374151',
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "500",
-    color: "#FFD700",
+    color: "#000000",
   },
   infoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 16,
+    gap: 8,
   },
   infoItem: {
     flexDirection: "row",
@@ -478,9 +478,9 @@ const styles = StyleSheet.create({
     minWidth: "45%",
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    width: 36,
+    height: 36,
+    backgroundColor: "#efefef",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#FFFFFF",
+    color: "#000000",
   },
   statusIndicatorContainer: {
     flexDirection: "row",
@@ -505,40 +505,38 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   descriptionContainer: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    padding: 20,
-    // borderWidth: 1,
-    // borderColor: '#374151',
+    padding: 16,
+    paddingBottom: 0,
+    paddingTop: 0
   },
-  descriptionContent: {
-    padding: 4,
-  },
+
   descriptionText: {
-    color: "#D1D5DB",
+    color: "#000000",
   },
   noDescriptionText: {
     fontStyle: "italic",
-    color: "#6B7280",
+    color: "#000000",
   },
   violationsContainer: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    color: "#000000",
 
-    padding: 20,
-    // borderWidth: 1,
-    // borderColor: '#374151',
+    padding: 16,
+
   },
   violationsList: {
     gap: 4,
-    padding: 4,
+    paddingTop: 8,
+    paddingBottom:4
+  
   },
   violationItem: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems:"center",
     gap: 8,
     padding: 2,
   },
   violationText: {
-    fontSize: 14,
-    color: "#6B7280",
+    fontSize: 13,
+    color: "#000000",
   },
 });

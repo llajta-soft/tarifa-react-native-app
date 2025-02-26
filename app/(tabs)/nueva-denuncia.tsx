@@ -15,6 +15,8 @@ import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import BouncyCheckbox from "react-native-bouncy-checkbox";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 interface FormData {
   transportLine: string;
   vehiclePlate: string;
@@ -50,7 +52,21 @@ export default function FormularioDenuncia() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+      // Función para obtener el token de AsyncStorage
+      const getToken = async () => {
+        try {
+          const token = await AsyncStorage.getItem("@storage_token");
+          return token;
+        } catch (error) {
+          console.error("Error al obtener el token:", error);
+          return null;
+        }
+      };
+
+      
+
   const pickImage = async () => {
+    
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
@@ -82,6 +98,7 @@ export default function FormularioDenuncia() {
   };
 
   const onSubmit = async (data: FormData) => {
+    const token = await getToken();  // Obtener el token
     setSubmitting(true);
     setErrorMessage(null);
 
@@ -103,11 +120,11 @@ export default function FormularioDenuncia() {
       console.log(formData);
 
       const response = await axios.post(
-        "http://192.168.1.6:3000/api/account/complaints",
+        "https://tarifa.vercel.app/api/account/complaints",
         formData,
         {
           headers: {
-            "Content-Type": "application/json", // Cambié a "application/json" para enviar JSON
+            Authorization: `Bearer ${token}`,  // Incluir el token en los encabezados
           },
         }
       );
@@ -352,111 +369,163 @@ export default function FormularioDenuncia() {
 
 
 
-
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#000000",
   },
   container: {
-    padding: 16,
+    padding: 8,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFD700",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  subtitle: {
+    color: "#ccc",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  successMessage: {
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 215, 0, 0.2)",
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  successText: {
+    fontSize: 18,
+    color: "#fff",
+    marginVertical: 10,
+  },
+  errorMessage: {
+    backgroundColor: "#FF6347",
+    padding: 10,
+    borderRadius: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  errorText: {
+    color: "#fff",
+    marginLeft: 10,
   },
   formContainer: {
-    backgroundColor: "white",
+    marginBottom: 12,
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
     borderRadius: 8,
-    padding: 16,
-    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 215, 0, 0.2)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
+
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    padding: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 215, 0, 0.1)",
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   flagIconContainer: {
-    marginRight: 8,
+    backgroundColor: "rgba(255, 215, 0, 0.2)",
+    padding: 8,
+    borderRadius: 6,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
   },
+
   denunciaContainer: {
-    marginTop: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+
+    padding: 20,
+    // borderWidth: 1,
+    // borderColor: '#374151',
   },
+
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: 15,
   },
   label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+    color: "#FFD700",
+    fontWeight: "bold",
+    marginBottom: 5,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 8,
+    borderColor: "#555",
+    backgroundColor: "#111",
+    color: "#fff",
+    padding: 10,
+    borderRadius: 5,
   },
-  textArea: {
-    height: 100,
+  error: {
+    color: "#FF6347",
+    fontSize: 12,
+    marginTop: 5,
+  },
+  imagePreview: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginTop: 10,
   },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   checkboxLabel: {
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  imagePreview: {
-    width: 100,
-    height: 100,
-    marginTop: 8,
-    borderRadius: 8,
+    color: "#fff",
   },
   radioContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
-  },
-  radioOption: {
-    padding: 8,
+    marginTop: 10,
   },
   radioLabel: {
+    color: "#FFD700", // Amarillo
     fontSize: 16,
+    marginHorizontal: 10,
+  
   },
   radioLabelSelected: {
+    color: "white", // Blanco cuando se selecciona
     fontWeight: "bold",
-    color: "#FFD700",
+    backgroundColor: "#333",
+    borderRadius: 10,
+    padding : 4
   },
-  errorMessage: {
-    flexDirection: "row",
-    backgroundColor: "#f8d7da",
-    padding: 12,
-    marginBottom: 16,
-    borderRadius: 8,
-  },
-  errorText: {
-    color: "#721c24",
-    marginLeft: 8,
-  },
-  successMessage: {
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#d4edda",
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  successText: {
+  button: {
+    backgroundColor: "#FFD700", // Amarillo
+    color: "white", // Texto blanco
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 15,
     fontSize: 16,
-    fontWeight: "bold",
-    marginVertical: 8,
-    color: "#155724",
+    width: "100%",
+    textAlign: "center",
   },
+  
 });
