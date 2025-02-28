@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,14 +8,51 @@ import {
   StatusBar,
   ImageBackground,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width, height } = Dimensions.get("window");
 
 export default function LandingScreen() {
   const router = useRouter();
+  
+  // Estado para verificar si se está comprobando la sesión
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Verificar si hay sesión activa al cargar la pantalla
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const token = await AsyncStorage.getItem("@storage_token");
+        if (token) {
+          router.replace("/dash"); // Redirige si ya hay sesión activa
+        }
+      } catch (error) {
+        console.error("Error al verificar la sesión:", error);
+        Alert.alert("Error", "No se pudo verificar la sesión.");
+      } finally {
+        setIsCheckingSession(false); // Finaliza la verificación
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  // Si aún se está verificando la sesión, mostrar el indicador de carga
+  if (isCheckingSession) {
+    return (
+      <SafeAreaView style={styles.mainContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFD700" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.mainContainer}>
@@ -42,14 +79,14 @@ export default function LandingScreen() {
                 </View>
               </View>
 
-              {/* Information card */}
+              {/* Información */}
               <View style={styles.infoContainer}>
                 <Text style={styles.infoTitle}>
                   ¡Denuncia cobros indebidos en el transporte público de Cochabamba!
                 </Text>
               </View>
 
-              {/* Action buttons with improved design */}
+              {/* Botones de acción */}
               <View style={styles.actionContainer}>
                 <TouchableOpacity
                   style={styles.button}
@@ -72,7 +109,7 @@ export default function LandingScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Footer */}
+              {/* Pie de página */}
               <Text style={styles.footerText}>Versión 1.0 - LLajtasoft</Text>
             </View>
           </View>
@@ -125,7 +162,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 5,
-    marginBottom: 10, // Cambiado marginRight a marginBottom para alineación en columna
+    marginBottom: 10,
   },
   logoText: {
     fontSize: 28,
@@ -154,7 +191,6 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     padding: 15,
-  
   },
   infoTitle: {
     fontSize: 16,
@@ -218,5 +254,11 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.5)",
     fontSize: 12,
     marginTop: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
   },
 });

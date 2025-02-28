@@ -35,7 +35,7 @@ export default function LoginScreen() {
     try {
       const token = await AsyncStorage.getItem("@storage_token");
       if (token) {
-        router.replace("/(tabs)"); // Redirige si ya hay sesión
+        router.replace("/dash"); // Redirige si ya hay sesión
       }
     } catch (error) {
       console.error("Error al recuperar la sesión:", error);
@@ -77,7 +77,7 @@ export default function LoginScreen() {
         }
 
         Alert.alert("Inicio de Sesión", "Has iniciado sesión correctamente.");
-        router.replace("/(tabs)"); // Navega a la pantalla principal
+        router.replace("/dash"); // Redirige y reemplaza la ruta para evitar volver atrás
       }
     } catch (error: any) {
       setLoading(false);

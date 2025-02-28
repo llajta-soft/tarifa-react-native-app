@@ -45,7 +45,7 @@ export default function TabLayout() {
     <>
       {/* Barra de estado */}
       <RNStatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      {/* <View style={styles.statusBar} /> */}
+      <View style={styles.statusBar} />
 
       {/* Barra superior */}
       <View style={styles.header}>
@@ -66,7 +66,7 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
+          name="dash"
           options={{
             title: 'Inicio',
             tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={23} color={color} />,

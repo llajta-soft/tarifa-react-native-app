@@ -60,7 +60,7 @@ export default function HomeScreen() {
         }
       );
 
-      console.log(response.data);
+      // console.log(response.data);
 
       setFeed(response.data);
       setFeedOriginal(response.data);

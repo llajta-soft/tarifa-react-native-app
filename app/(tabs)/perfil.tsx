@@ -65,7 +65,11 @@ export default function MiPerfilScreen() {
     await AsyncStorage.removeItem("@storage_token");
     await AsyncStorage.removeItem("@storage_user");
     await AsyncStorage.removeItem("@storage_fares");
-    navigation.navigate('index');
+   // Resetear el historial de navegación
+   navigation.reset({
+    index: 0,
+    routes: [{ name: 'index' }],  // Redirige a la pantalla de inicio
+  });
   };
 
   const handleEditProfile = () => {

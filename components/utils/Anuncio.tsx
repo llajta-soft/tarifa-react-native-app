@@ -44,11 +44,11 @@ const CarruselAnuncios: React.FC = () => {
   const [anuncios, setAnuncios] = useState<any[]>([]); // Para almacenar los anuncios
   const [loading, setLoading] = useState<boolean>(true); // Para manejar el estado de carga
   const [error, setError] = useState<string | null>(null); // Para manejar errores
+
   // Función para obtener el token de AsyncStorage
   const getToken = async () => {
     try {
       const token = await AsyncStorage.getItem("@storage_token");
-
       return token;
     } catch (error) {
       return null;
@@ -89,6 +89,10 @@ const CarruselAnuncios: React.FC = () => {
 
   if (error) {
     return <Text>{error}</Text>; // Mostrar error si ocurre alguno
+  }
+
+  if (anuncios.length === 0) {
+    return null; // No renderizar nada si no hay anuncios
   }
 
   const renderAnuncio = (item, index) => <Anuncio key={index} {...item} />;
