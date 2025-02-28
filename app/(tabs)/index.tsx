@@ -52,7 +52,7 @@ export default function HomeScreen() {
     const token = await getToken(); // Obtener el token
     try {
       const response = await axios.get(
-        "http://192.168.1.6:3000/api/account/feed",
+        "https://tarifa.vercel.app/api/account/feed",
         {
           headers: {
             Authorization: `Bearer ${token}`, // Incluir el token en los encabezados

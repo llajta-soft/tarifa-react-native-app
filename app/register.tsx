@@ -23,7 +23,7 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://192.168.1.6:3000/api/auth/register",
+        "https://tarifa.vercel.app/api/auth/register",
         { ...data, FK_fare: fareType  } // Incluye fareType en los datos enviados
       );
       setLoading(false);

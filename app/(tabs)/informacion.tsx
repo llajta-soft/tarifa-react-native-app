@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
-import EnviarImagen from '@/components/utils/EnviarImagen';
 
 export default function TarifaScreen() {
   return (
@@ -11,7 +10,6 @@ export default function TarifaScreen() {
         <Text style={styles.pageDescription}>
           Regulación de Tarifas de Transporte Público en Cercado Cochabamba, Bolivia
         </Text>
-        <EnviarImagen/>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>1. Introducción</Text>

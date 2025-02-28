@@ -22,8 +22,6 @@ import BouncyCheckbox from "react-native-bouncy-checkbox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 
-
-
 interface FormData {
   transportLine: string;
   vehiclePlate: string;
@@ -59,6 +57,7 @@ export default function FormularioDenuncia() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Función para obtener el token de AsyncStorage
   const getToken = async () => {
     try {
       const token = await AsyncStorage.getItem("@storage_token");
@@ -101,77 +100,50 @@ export default function FormularioDenuncia() {
     }
   };
 
-
-
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: FormData) => {
     const token = await getToken(); // Obtener el token
     setSubmitting(true);
     setErrorMessage(null);
-  
+
     try {
-      // Crear el objeto de datos
       const formData = {
         transportLine: data.transportLine,
         vehiclePlate: data.vehiclePlate,
         violations: data.violations,
         incidentRelation: data.incidentRelation,
         description: data.description || "",
+        image: data.image
+          ? {
+              uri: data.image.uri,
+              type: data.image.type,
+              name: data.image.name,
+            }
+          : undefined,
       };
-  
-      // Si hay una imagen, agregarla
-      if (data.image) {
-        const imageUri = data.image.uri;
-        console.log("URI de la imagen:", imageUri);
-  
-        // Convertir la imagen a Blob
-        const response = await fetch(imageUri);
-        const blob = await response.blob();
-        console.log("Imagen convertida a Blob:", blob);
-  
-        // Convertir el Blob a base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64Image = reader.result.split(',')[1]; // Obtén solo la parte base64
-          console.log("Imagen en base64:", base64Image);
-  
-          // Añadir la imagen en base64 al objeto de datos
-          formData.image = base64Image;
-          sendData(formData, token); // Llamar a la función de envío con los datos
-        };
-        reader.readAsDataURL(blob); // Convertir el blob a base64
-      } else {
-        sendData(formData, token); // Llamar a la función de envío sin imagen
-      }
-    } catch (err) {
-      setErrorMessage(
-        "Error al enviar la denuncia. Por favor, intenta de nuevo o cierra la aplicación."
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-  
-  // Función que se encarga de enviar los datos
-  const sendData = async (formData, token) => {
-    try {
+
+      console.log("Esto se esta enviando");
+      console.log(formData);
+
       const response = await axios.post(
-        "http://192.168.1.6:3000/api/account/complaints",
+        "https://tarifa.vercel.app/api/account/complaints",
         formData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json", // Enviar como JSON
+            Authorization: `Bearer ${token}`, // Incluir el token en los encabezados
           },
         }
       );
-  
+      console.log(response);
+
+
       if (response.status === 200 || response.status === 201) {
         Alert.alert(
           "¡Denuncia Realizada con Éxito!",
-          "Se está haciendo revisión a su denuncia.",
+          "Se esta haciendo revision a su denuncia.",
           [
             {
               text: "OK",
+
               onPress: () => {
                 reset();
                 navigation.navigate("historial", { autoRefresh: true });
@@ -183,11 +155,12 @@ export default function FormularioDenuncia() {
       }
     } catch (err) {
       setErrorMessage(
-        "Error al enviar la denuncia. Por favor, intenta de nuevo o cierra la aplicación."
+        "Error al enviar la denuncia. Por favor, intenta de nuevo. o cierra la aplicación."
       );
+    } finally {
+      setSubmitting(false);
     }
   };
-  
 
   const violationsOptions = [
     "Cobro de tarifas superiores a la Ley",
@@ -196,11 +169,6 @@ export default function FormularioDenuncia() {
     "Incumplimiento de criterios de Calidad",
     "Incumplimiento de criterios de Seguridad",
   ];
-
-
-
-
-  
 
   return (
     <ScrollView style={styles.mainContainer}>

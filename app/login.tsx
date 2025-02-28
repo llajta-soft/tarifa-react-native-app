@@ -52,7 +52,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://192.168.1.6:3000/api/auth/login",
+        "https://tarifa.vercel.app/api/auth/login",
         data
       );
 
