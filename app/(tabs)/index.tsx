@@ -21,12 +21,17 @@ import {
   Car,
   Bus,
   Route,
+  MessageSquareQuote,
   Image as ImageIcon,
 } from "lucide-react-native";
+import BienvenidaUsuario from "../../components/utils/BienvenidaUsuario";
+import Buscador from "../../components/utils/Buscador";
+import Anuncio from "../../components/utils/Anuncio";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen() {
+  const [feedOriginal, setFeedOriginal] = useState([]);
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,7 +52,7 @@ export default function HomeScreen() {
     const token = await getToken(); // Obtener el token
     try {
       const response = await axios.get(
-        "https://tarifa.vercel.app/api/account/feed",
+        "http://192.168.1.6:3000/api/account/feed",
         {
           headers: {
             Authorization: `Bearer ${token}`, // Incluir el token en los encabezados
@@ -55,11 +60,14 @@ export default function HomeScreen() {
         }
       );
 
+      console.log(response.data);
+
       setFeed(response.data);
+      setFeedOriginal(response.data);
       setLoading(false);
       setRefreshing(false);
     } catch (err) {
-      setError("Hubo un error al cargar las denuncias.");
+      setError("Hubo un error al cargar las denuncias, intenta cerrar la aplicación.");
       setLoading(false);
       setRefreshing(false);
       Alert.alert(
@@ -129,10 +137,19 @@ export default function HomeScreen() {
 
   if (error) {
     return (
-      <View style={styles.centeredContainer}>
+      <ScrollView
+        contentContainerStyle={styles.centeredContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#7c7c7c"]}
+          />
+        }
+      >
         <AlertCircle size={48} color="#EF4444" />
         <Text style={styles.errorText}>{error}</Text>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -147,11 +164,15 @@ export default function HomeScreen() {
         />
       }
     >
+      <BienvenidaUsuario />
+      <Anuncio />
+
+      <Buscador feed={feed} setFeed={setFeed} feedOriginal={feedOriginal} />
       <View style={styles.container}>
         {feed.length === 0 ? (
           <View style={styles.emptyContainer}>
             <FileText size={48} color="#6B7280" />
-            <Text style={styles.emptyText}>No hay denuncias disponibles.</Text>
+            <Text style={styles.emptyText}>No hay denuncias.</Text>
           </View>
         ) : (
           feed.map((denuncia) => (
@@ -160,7 +181,7 @@ export default function HomeScreen() {
               <View style={styles.cardHeader}>
                 <View style={styles.headerLeft}>
                   <View style={styles.flagIconContainer}>
-                    <Flag size={20} color="#7c7c7c" />
+                    <MessageSquareQuote size={20} color="#7c7c7c" />
                   </View>
                   <View>
                     <Text style={styles.cardTitle}>
@@ -184,18 +205,27 @@ export default function HomeScreen() {
                     {denuncia.image ? (
                       <View style={styles.imageContainer}>
                         <Image
-                          source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuAM7MdflxK4Yf7qjor3SqZPSja_aB4lIA5g&s" }}
+                          source={{
+                            uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuAM7MdflxK4Yf7qjor3SqZPSja_aB4lIA5g&s",
+                          }}
                           style={styles.image}
                         />
                       </View>
                     ) : (
                       <View style={styles.imageContainer}>
-                      <Image
-                        source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuAM7MdflxK4Yf7qjor3SqZPSja_aB4lIA5g&s" }}
-                        style={styles.image}
-                      />
-                    </View>
+                        <Image
+                          source={{
+                            uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuAM7MdflxK4Yf7qjor3SqZPSja_aB4lIA5g&s",
+                          }}
+                          style={styles.image}
+                        />
+                      </View>
                     )}
+
+                    {/*   <View style={styles.noImageContainer}>
+                                            <ImageIcon size={32} color="#4B5563" />
+                                            <Text style={styles.noImageText}>Sin imagen</Text>
+                                          </View> */}
 
                     {/* Transport Info Section */}
                     <View style={styles.transportInfoContainer}>
@@ -259,9 +289,6 @@ export default function HomeScreen() {
                             </View>
                           </View>
                         </View>
-
-
-
                       </View>
                     </View>
                   </View>
@@ -339,6 +366,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 40,
     minHeight: 300,
+    // color:"#000000",
+    backgroundColor: "#ffffff",
   },
   loadingSpinner: {
     width: 48,
@@ -389,7 +418,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     padding: 16,
     backgroundColor: "",
- 
   },
   headerLeft: {
     flexDirection: "row",
@@ -507,7 +535,7 @@ const styles = StyleSheet.create({
   descriptionContainer: {
     padding: 16,
     paddingBottom: 0,
-    paddingTop: 0
+    paddingTop: 0,
   },
 
   descriptionText: {
@@ -521,17 +549,15 @@ const styles = StyleSheet.create({
     color: "#000000",
 
     padding: 16,
-
   },
   violationsList: {
     gap: 4,
     paddingTop: 8,
-    paddingBottom:4
-  
+    paddingBottom: 4,
   },
   violationItem: {
     flexDirection: "row",
-    alignItems:"center",
+    alignItems: "center",
     gap: 8,
     padding: 2,
   },

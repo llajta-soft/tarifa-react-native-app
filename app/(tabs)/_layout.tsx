@@ -1,60 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, View, StatusBar as RNStatusBar } from 'react-native';
+import { Platform, View, Text, StatusBar as RNStatusBar, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { HapticTab } from '@/components/HapticTab';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Asegúrate de importar AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TabLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userData, setUserData] = useState(null);
   const navigation = useNavigation();
 
   useEffect(() => {
     // Verifica si el usuario está autenticado
     const checkAuth = async () => {
-      const token = await getAuthToken(); // Obtiene el token de AsyncStorage
+      const token = await getAuthToken();
       if (!token) {
-        navigation.navigate('landing'); // Redirigir a la pantalla de landing si no hay token
+        navigation.navigate('landing');
       } else {
-        setIsAuthenticated(true); // Si tiene token, está autenticado
+        setIsAuthenticated(true);
+      }
+    };
+
+    // Obtener datos del usuario desde AsyncStorage
+    const fetchUserData = async () => {
+      const user = await AsyncStorage.getItem("@storage_user");
+      if (user) {
+        setUserData(JSON.parse(user));
       }
     };
 
     checkAuth();
+    fetchUserData();
   }, []);
 
   if (!isAuthenticated) {
-    return null; // Puedes mostrar un loading mientras se verifica la autenticación
+    return null;
   }
 
-  // Definir colores para el modo claro
-  const tabBarStyle = { 
-    backgroundColor: '#ffffff', // Fondo claro para el modo claro
-    borderTopWidth: 0,           // Eliminar borde superior
-    paddingVertical: 50          // Aumenté el padding en el eje Y a 50 para hacerlo más alto
-  };
-  const activeColor = 'black';     // Color de los íconos activos (oscuro)
-  const inactiveColor = '#A9A9A9'; // Color de los íconos inactivos (gris)
+  // Obtener la primera letra del firstName del usuario
+  const firstLetter = userData?.firstName ? userData.firstName.charAt(0).toUpperCase() : '?';
 
   return (
     <>
-      {/* Cambiar el fondo de la barra de estado a blanco y el texto a oscuro */}
+      {/* Barra de estado */}
       <RNStatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      {/* Vista para cubrir el status bar en Android */}
-      <View style={{
-        height: Platform.OS === 'ios' ? 20 : RNStatusBar.currentHeight,
-        backgroundColor: '#ffffff' // Fondo blanco para la barra de estado en Android
-      }} />
-      
+      {/* <View style={styles.statusBar} /> */}
+
+      {/* Barra superior */}
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Tarifa</Text>
+        {/* <Text style={styles.pageTitle}>Inicio</Text> */}
+        <View style={styles.profileCircle}>
+          <Text style={styles.profileText}>{firstLetter}</Text>
+        </View>
+      </View>
+
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: activeColor,
-          tabBarInactiveTintColor: inactiveColor,
+          tabBarActiveTintColor: 'black',
+          tabBarInactiveTintColor: '#A9A9A9',
           headerShown: false,
           tabBarButton: HapticTab,
-          tabBarStyle: tabBarStyle,
+          tabBarStyle: styles.tabBar,
         }}
       >
         <Tabs.Screen
@@ -97,13 +105,56 @@ export default function TabLayout() {
   );
 }
 
-// Función para obtener el token de AsyncStorage
 async function getAuthToken() {
   try {
     const token = await AsyncStorage.getItem('@storage_token');
-    return token; // Retorna el token si está presente
+    return token;
   } catch (error) {
     console.error('Error al obtener el token:', error);
-    return null; // Retorna null si ocurre un error al obtener el token
+    return null;
   }
 }
+
+const styles = StyleSheet.create({
+  statusBar: {
+    height: Platform.OS === 'ios' ? 20 : RNStatusBar.currentHeight,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'black',
+  },
+  pageTitle: {
+    fontSize: 18,
+    color: '#555',
+  },
+  profileCircle: {
+    width: 35,
+    height: 35,
+    borderRadius: 50,
+    backgroundColor: '#efefef',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileText: {
+    color: '#525252',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  tabBar: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 0,
+    paddingVertical: 15,
+  },
+});
+

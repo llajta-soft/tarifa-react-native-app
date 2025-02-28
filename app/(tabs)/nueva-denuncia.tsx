@@ -3,19 +3,26 @@ import {
   View,
   TextInput,
   Text,
-  Button,
   StyleSheet,
   Image,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import axios from "axios";
-import { Check, AlertCircle, Flag } from "lucide-react-native";
+import {
+  Check,
+  AlertCircle,
+  Flag,
+  Image as ImageIcon,
+} from "lucide-react-native";
 import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import BouncyCheckbox from "react-native-bouncy-checkbox";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+
+
 
 interface FormData {
   transportLine: string;
@@ -31,12 +38,13 @@ interface FormData {
 }
 
 export default function FormularioDenuncia() {
+  const navigation = useNavigation();
   const {
     control,
     handleSubmit,
     formState: { errors },
-    watch,
     setValue,
+    reset,
   } = useForm<FormData>({
     defaultValues: {
       transportLine: "",
@@ -50,25 +58,21 @@ export default function FormularioDenuncia() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-      // Función para obtener el token de AsyncStorage
-      const getToken = async () => {
-        try {
-          const token = await AsyncStorage.getItem("@storage_token");
-          return token;
-        } catch (error) {
-          console.error("Error al obtener el token:", error);
-          return null;
-        }
-      };
-
-      
+  const getToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem("@storage_token");
+      return token;
+    } catch (error) {
+      console.error("Error al obtener el token:", error);
+      return null;
+    }
+  };
 
   const pickImage = async () => {
-    
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         setErrorMessage("Se necesitan permisos para acceder a la galería");
         return;
@@ -97,316 +101,372 @@ export default function FormularioDenuncia() {
     }
   };
 
-  const onSubmit = async (data: FormData) => {
-    const token = await getToken();  // Obtener el token
+
+
+  const onSubmit = async (data) => {
+    const token = await getToken(); // Obtener el token
     setSubmitting(true);
     setErrorMessage(null);
-
+  
     try {
+      // Crear el objeto de datos
       const formData = {
         transportLine: data.transportLine,
         vehiclePlate: data.vehiclePlate,
         violations: data.violations,
         incidentRelation: data.incidentRelation,
         description: data.description || "",
-        image: data.image ? {
-          uri: data.image.uri,
-          type: data.image.type,
-          name: data.image.name,
-        } : undefined,
       };
-
-      console.log("Esto se esta enviando");
-      console.log(formData);
-
-      const response = await axios.post(
-        "https://tarifa.vercel.app/api/account/complaints",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,  // Incluir el token en los encabezados
-          },
-        }
-      );
-
-      if (response.status === 200 || response.status === 201) {
-        setSuccess(true);
+  
+      // Si hay una imagen, agregarla
+      if (data.image) {
+        const imageUri = data.image.uri;
+        console.log("URI de la imagen:", imageUri);
+  
+        // Convertir la imagen a Blob
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        console.log("Imagen convertida a Blob:", blob);
+  
+        // Convertir el Blob a base64
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Image = reader.result.split(',')[1]; // Obtén solo la parte base64
+          console.log("Imagen en base64:", base64Image);
+  
+          // Añadir la imagen en base64 al objeto de datos
+          formData.image = base64Image;
+          sendData(formData, token); // Llamar a la función de envío con los datos
+        };
+        reader.readAsDataURL(blob); // Convertir el blob a base64
+      } else {
+        sendData(formData, token); // Llamar a la función de envío sin imagen
       }
     } catch (err) {
-      console.error(err);
       setErrorMessage(
-        "Error al enviar la denuncia. Por favor, intenta de nuevo."
+        "Error al enviar la denuncia. Por favor, intenta de nuevo o cierra la aplicación."
       );
     } finally {
       setSubmitting(false);
     }
   };
+  
+  // Función que se encarga de enviar los datos
+  const sendData = async (formData, token) => {
+    try {
+      const response = await axios.post(
+        "http://192.168.1.6:3000/api/account/complaints",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json", // Enviar como JSON
+          },
+        }
+      );
+  
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert(
+          "¡Denuncia Realizada con Éxito!",
+          "Se está haciendo revisión a su denuncia.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                reset();
+                navigation.navigate("historial", { autoRefresh: true });
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      }
+    } catch (err) {
+      setErrorMessage(
+        "Error al enviar la denuncia. Por favor, intenta de nuevo o cierra la aplicación."
+      );
+    }
+  };
+  
 
   const violationsOptions = [
+    "Cobro de tarifas superiores a la Ley",
+    "Abandonar al usuario a medio recorrido",
+    "No recoger un pasajero",
     "Incumplimiento de criterios de Calidad",
     "Incumplimiento de criterios de Seguridad",
-    "Cobro de tarifas superiores a la Ley",
-    "No recoger un pasajero",
-    "Abandonar al usuario a medio recorrido",
   ];
+
+
+
+
+  
 
   return (
     <ScrollView style={styles.mainContainer}>
       <View style={styles.container}>
-        {success ? (
-          <View style={styles.successMessage}>
-            <Check size={32} color="green" />
-            <Text style={styles.successText}>
-              ¡Denuncia Realizada con Éxito!
-            </Text>
-            <Button
-              title="Realizar Otra Denuncia"
-              onPress={() => {
-                setSuccess(false);
-                setImagePreview(null);
-                setValue("violations", []);
-                setValue("transportLine", "");
-                setValue("vehiclePlate", "");
-                setValue("incidentRelation", "");
-                setValue("description", "");
-              }}
-            />
+        {errorMessage && (
+          <View style={styles.errorMessage}>
+            <AlertCircle size={24} color="#D8000C" />
+            <Text style={styles.errorText}>{errorMessage}</Text>
           </View>
-        ) : (
-          <>
-            {errorMessage && (
-              <View style={styles.errorMessage}>
-                <AlertCircle size={24} color="red" />
-                <Text style={styles.errorText}>{errorMessage}</Text>
-              </View>
-            )}
-
-            <View style={styles.formContainer}>
-              <View style={styles.cardHeader}>
-                <View style={styles.headerLeft}>
-                  <View style={styles.flagIconContainer}>
-                    <Flag size={20} color="#FFD700" />
-                  </View>
-                  <Text style={styles.cardTitle}>Nueva denuncia</Text>
-                </View>
-              </View>
-
-              <View style={styles.denunciaContainer}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Línea de Transporte</Text>
-                  <Controller
-                    control={control}
-                    name="transportLine"
-                    rules={{ required: "Este campo es obligatorio" }}
-                    render={({ field: { onChange, value } }) => (
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Ej. Línea 1, Metro, Bus 104"
-                        value={value}
-                        onChangeText={onChange}
-                      />
-                    )}
-                  />
-                  {errors.transportLine && (
-                    <Text style={styles.error}>
-                      {errors.transportLine.message}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Placa del Vehículo</Text>
-                  <Controller
-                    control={control}
-                    name="vehiclePlate"
-                    rules={{ required: "Este campo es obligatorio" }}
-                    render={({ field: { onChange, value } }) => (
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Ej. ABC-123"
-                        value={value}
-                        onChangeText={onChange}
-                      />
-                    )}
-                  />
-                  {errors.vehiclePlate && (
-                    <Text style={styles.error}>
-                      {errors.vehiclePlate.message}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Evidencia Fotográfica</Text>
-                  <Button title="Subir Imagen" onPress={pickImage} />
-                  {imagePreview && (
-                    <Image
-                      source={{ uri: imagePreview }}
-                      style={styles.imagePreview}
-                    />
-                  )}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Infracciones</Text>
-                  <Controller
-                    control={control}
-                    name="violations"
-                    rules={{
-                      validate: (value) =>
-                        value.length > 0 ||
-                        "Selecciona al menos una infracción",
-                    }}
-                    render={({ field: { value, onChange } }) => (
-                      <View>
-                        {violationsOptions.map((violation) => (
-                          <View
-                            key={violation}
-                            style={styles.checkboxContainer}
-                          >
-                            <BouncyCheckbox
-                              size={25}
-                              fillColor="#FFD700"
-                              unfillColor="#fff"
-                              text={violation}
-                              iconStyle={{ borderColor: "#FFD700" }}
-                              textStyle={styles.checkboxLabel}
-                              isChecked={value.includes(violation)}
-                              onPress={(newValue) => {
-                                const updatedViolations = newValue
-                                  ? [...value, violation]
-                                  : value.filter((v) => v !== violation);
-                                onChange(updatedViolations);
-                              }}
-                            />
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  />
-                  {errors.violations && (
-                    <Text style={styles.error}>
-                      {errors.violations.message}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Relación con el Incidente</Text>
-                  <Controller
-                    control={control}
-                    name="incidentRelation"
-                    rules={{ required: "Este campo es obligatorio" }}
-                    render={({ field: { onChange, value } }) => (
-                      <View style={styles.radioContainer}>
-                        <TouchableOpacity
-                          onPress={() => onChange("Víctima")}
-                          style={styles.radioOption}
-                        >
-                          <Text
-                            style={[
-                              styles.radioLabel,
-                              value === "Víctima" && styles.radioLabelSelected,
-                            ]}
-                          >
-                            Víctima
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => onChange("Testigo")}
-                          style={styles.radioOption}
-                        >
-                          <Text
-                            style={[
-                              styles.radioLabel,
-                              value === "Testigo" && styles.radioLabelSelected,
-                            ]}
-                          >
-                            Testigo
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  />
-                  {errors.incidentRelation && (
-                    <Text style={styles.error}>
-                      {errors.incidentRelation.message}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Descripción (Opcional)</Text>
-                  <Controller
-                    control={control}
-                    name="description"
-                    render={({ field: { onChange, value } }) => (
-                      <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Describe el incidente..."
-                        value={value}
-                        onChangeText={onChange}
-                        multiline
-                        numberOfLines={4}
-                      />
-                    )}
-                  />
-                </View>
-
-                <Button
-                  title={submitting ? "Enviando..." : "Enviar Denuncia"}
-                  onPress={handleSubmit(onSubmit)}
-                  disabled={submitting}
-                />
-              </View>
-            </View>
-          </>
         )}
+
+        <View style={styles.formContainer}>
+          <View style={styles.cardHeader}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.cardTitle}>Nueva denuncia</Text>
+            </View>
+          </View>
+          <View style={styles.denunciaContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Línea de Transporte</Text>
+              <Controller
+                control={control}
+                name="transportLine"
+                rules={{
+                  required: "Este campo es obligatorio",
+                  minLength: {
+                    value: 1,
+                    message:
+                      "La línea de transporte debe tener al menos 1 carácter",
+                  },
+                  maxLength: {
+                    value: 20,
+                    message:
+                      "La línea de transporte no puede tener más de 20 caracteres",
+                  },
+                }}
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej. 130"
+                    placeholderTextColor="#999"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                )}
+              />
+              {errors.transportLine && (
+                <Text style={styles.error}>{errors.transportLine.message}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Placa del Vehículo</Text>
+              <Controller
+                control={control}
+                name="vehiclePlate"
+                rules={{
+                  required: "Este campo es obligatorio",
+                  pattern: {
+                    value: /^(?:\d{3}[A-Za-z]{3}|\d{4}[A-Za-z]{3})$/,
+                    message:
+                      "La placa debe tener 6 o 7 caracteres, donde los primeros son dígitos y los siguientes letras",
+                  },
+                }}
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ej. 1234JGH"
+                    placeholderTextColor="#999"
+                    value={value}
+                    onChangeText={onChange}
+                  />
+                )}
+              />
+              {errors.vehiclePlate && (
+                <Text style={styles.error}>{errors.vehiclePlate.message}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Evidencia Fotográfica</Text>
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                <ImageIcon size={20} color="#222" style={styles.uploadIcon} />
+                <Text style={styles.uploadButtonText}>Subir Imagen</Text>
+              </TouchableOpacity>
+              {imagePreview && (
+                <Image
+                  source={{ uri: imagePreview }}
+                  style={styles.imagePreview}
+                />
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Infracciones</Text>
+              <Controller
+                control={control}
+                name="violations"
+                rules={{
+                  validate: (value) =>
+                    value.length > 0 || "Selecciona al menos una infracción",
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <View>
+                    {violationsOptions.map((violation) => (
+                      <View key={violation} style={styles.checkboxContainer}>
+                        <BouncyCheckbox
+                          size={25}
+                          fillColor="#000000"
+                          unfillColor="#FFF"
+                          text={violation}
+                          iconStyle={{ borderColor: "#FFD700" }}
+                          textStyle={styles.checkboxLabel}
+                          isChecked={value.includes(violation)}
+                          onPress={(newValue) => {
+                            const updatedViolations = newValue
+                              ? [...value, violation]
+                              : value.filter((v) => v !== violation);
+                            onChange(updatedViolations);
+                          }}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )}
+              />
+              {errors.violations && (
+                <Text style={styles.error}>{errors.violations.message}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Relación con el Incidente</Text>
+              <Controller
+                control={control}
+                name="incidentRelation"
+                rules={{ required: "Este campo es obligatorio" }}
+                render={({ field: { onChange, value } }) => (
+                  <View style={styles.radioContainer}>
+                    <TouchableOpacity
+                      onPress={() => onChange("Víctima")}
+                      style={styles.radioOption}
+                    >
+                      <Text
+                        style={[
+                          styles.radioLabel,
+                          value === "Víctima" && styles.radioLabelSelected,
+                        ]}
+                      >
+                        Víctima
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => onChange("Testigo")}
+                      style={styles.radioOption}
+                    >
+                      <Text
+                        style={[
+                          styles.radioLabel,
+                          value === "Testigo" && styles.radioLabelSelected,
+                        ]}
+                      >
+                        Testigo
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+              {errors.incidentRelation && (
+                <Text style={styles.error}>
+                  {errors.incidentRelation.message}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.description}>
+              <Text style={styles.label}>Descripción *</Text>
+              <Controller
+                control={control}
+                name="description"
+                rules={{
+                  required: "La descripción es obligatoria.",
+                  validate: {
+                    minLength: (value) => {
+                      // Eliminar espacios y contar los caracteres restantes
+                      const charCount = value.replace(/\s/g, "").length;
+                      return (
+                        charCount >= 150 ||
+                        "La descripción debe tener al menos 150 caracteres sin contar los espacios."
+                      );
+                    },
+                    maxLength: (value) => {
+                      // Verificar si la longitud total es menor o igual a 500
+                      return (
+                        value.length <= 500 ||
+                        "La descripción no puede tener más de 500 caracteres."
+                      );
+                    },
+                  },
+                }}
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Ej. El chofer cobró Bs 2.50, a pesar de que mencioné que soy universitario y la tarifa para estudiantes es solo Bs 1.00, según la Ley Municipal N° 1575."
+                    placeholderTextColor="#999"
+                    value={value}
+                    onChangeText={onChange}
+                    multiline
+                    numberOfLines={4}
+                  />
+                )}
+              />
+              {errors.description && (
+                <Text style={styles.error}>{errors.description.message}</Text>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.disabledButton]}
+              onPress={handleSubmit(onSubmit)}
+              disabled={submitting}
+            >
+              <Text style={styles.submitButtonText}>
+                {submitting ? "Enviando..." : "Enviar Denuncia"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-
-
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#efefef",
   },
   container: {
     padding: 8,
-    paddingTop: 20,
+    paddingTop: 8,
     paddingBottom: 10,
   },
   pageTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#FFD700",
+    color: "#222",
     textAlign: "center",
     marginBottom: 10,
   },
-  subtitle: {
-    color: "#ccc",
-    textAlign: "center",
-    marginBottom: 20,
-  },
   successMessage: {
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    backgroundColor: "#E6F9E6",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(255, 215, 0, 0.2)",
+    borderColor: "#4CAF50",
     padding: 20,
     alignItems: "center",
     marginBottom: 20,
   },
   successText: {
     fontSize: 18,
-    color: "#fff",
+    color: "#4CAF50",
     marginVertical: 10,
   },
   errorMessage: {
-    backgroundColor: "#FF6347",
+    backgroundColor: "#FFE6E6",
     padding: 10,
     borderRadius: 5,
     flexDirection: "row",
@@ -414,72 +474,76 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
-    color: "#fff",
+    color: "#D8000C",
     marginLeft: 10,
   },
   formContainer: {
     marginBottom: 12,
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    backgroundColor: "#ffffff",
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 215, 0, 0.2)",
+
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#e4e2e2",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     padding: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 215, 0, 0.1)",
+    borderBottomColor: "#EEE",
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
+    textAlign: "center",
     gap: 12,
   },
   flagIconContainer: {
-    backgroundColor: "rgba(255, 215, 0, 0.2)",
+    backgroundColor: "#FFF",
     padding: 8,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#CCC",
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#222",
     textAlign: "center",
   },
-
   denunciaContainer: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-
+    backgroundColor: "#FFFFFF",
     padding: 20,
-    // borderWidth: 1,
-    // borderColor: '#374151',
   },
-
   inputGroup: {
     marginBottom: 15,
   },
+  description: {
+    marginBottom: 15,
+    height: 100,
+  },
   label: {
-    color: "#FFD700",
+    color: "#222",
     fontWeight: "bold",
     marginBottom: 5,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#555",
-    backgroundColor: "#111",
-    color: "#fff",
+    borderColor: "#CCC",
+    backgroundColor: "#FFF",
+    color: "#000",
     padding: 10,
     borderRadius: 5,
+  },
+  textArea: {
+    textAlignVertical: "top",
+    height: 100,
   },
   error: {
     color: "#FF6347",
@@ -498,34 +562,57 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   checkboxLabel: {
-    color: "#fff",
+    color: "#000",
+    fontSize: 15,
   },
   radioContainer: {
     flexDirection: "row",
     marginTop: 10,
   },
+
   radioLabel: {
-    color: "#FFD700", // Amarillo
+    color: "#222",
     fontSize: 16,
     marginHorizontal: 10,
-  
   },
   radioLabelSelected: {
-    color: "white", // Blanco cuando se selecciona
+    color: "#FFF",
     fontWeight: "bold",
-    backgroundColor: "#333",
+    backgroundColor: "#000000",
     borderRadius: 10,
-    padding : 4
+    padding: 4,
+    paddingHorizontal: 16,
   },
-  button: {
-    backgroundColor: "#FFD700", // Amarillo
-    color: "white", // Texto blanco
-    padding: 10,
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#CCC",
     borderRadius: 5,
-    marginTop: 15,
-    fontSize: 16,
-    width: "100%",
-    textAlign: "center",
+    padding: 10,
+    marginBottom: 10,
   },
-  
+  uploadIcon: {
+    marginRight: 8,
+  },
+  uploadButtonText: {
+    color: "#222",
+    fontWeight: "bold",
+  },
+  submitButton: {
+    backgroundColor: "#FFD700",
+    padding: 15,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 50,
+  },
+  submitButtonText: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
 });
