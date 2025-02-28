@@ -16,6 +16,17 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
     npx expo start
 
     <!-- npm install react-native-image-picker @react-native-community/checkbox -->
+
+    # para generar hacer correr en desarollo
+    npx expo start
+
+
+    # para generar el APK
+    eas build --platform android --profile preview
+
+    #Con Cable USB
+
+    npx expo run:android
    ```
 
 In the output, you'll find options to open the app in a
